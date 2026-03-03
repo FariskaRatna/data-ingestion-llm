@@ -1,0 +1,420 @@
+{
+    "case_number": {
+        "category": "what",
+        "method": "regex",
+        "patterns": [
+            "(?:PUTUSAN|Nomor|No)\\s*[:\\.]?\\s*(\\d+[\\s\\w\\.]*/[\\s\\w\\.\\-/]+)",
+            "(?:Perkara|Nomor)\\s*[:\\.]?\\s*(\\d+[\\d\\s\\w\\.\\-/]{10,80})"
+        ],
+        "stop_words": ["DEMI", "PENGADILAN", "MENGADILI", "Telah", "Berdasarkan"],
+        "scope": "header"
+    },
+    "court_name": {
+        "category": "what",
+        "method": "regex",
+        "patterns": [
+            "(Pengadilan\\s+Negeri\\s+[A-Za-z\\s]+?)(?:\\s+yang|\\s+Nomor|\\s+tanggal|\\s+Kelas)"
+        ],
+        "scope": "header"
+    },
+    "court_level": {
+        "category": "what",
+        "method": "regex",
+        "patterns": [
+            "(?:dalam|pada)?\\s*(?:pemeriksaan\\s+)?tingkat\\s+(pertama|banding|kasasi)"
+        ],
+        "scope": "header"
+    },
+    "defendant_gender": {
+        "category": "who",
+        "method": "regex",
+        "patterns": [
+            "Jenis\\s+Kelamin\\s*[:\\-]?\\s*(Lak[i\\s\\-]*laki|Perempuan|Wanita|Pria)"
+        ],
+        "scope": "header"
+    },
+    "defendant_religion": {
+        "category": "who",
+        "method": "regex",
+        "patterns": [
+            "Agama\\s*[:\\-]?\\s*(Islam|Kristen|Katolik|Hindu|Buddha|Konghucu|[^\\n]+)"
+        ],
+        "scope": "header"
+    },
+    "defendant_nationality": {
+        "category": "who",
+        "method": "regex",
+        "patterns": [
+            "Kebangsaan\\s*[:\\-]?\\s*([^\\n]+)"
+        ],
+        "scope": "header"
+    },
+    "defendant_pob": {
+        "category": "who",
+        "method": "regex",
+        "patterns": [
+            "Tempat\\s+(?:Lahir|/\\s*Tanggal\\s+Lahir)\\s*[:\\-]?\\s*([A-Za-z\\s]+?)(?=\\s*(?:Umur|Tanggal|\\d|,|\\n))",
+            "lahir\\s+di\\s+([A-Za-z\\s]+?)(?=\\s*(?:pada|,|\\d|\\n))"
+        ],
+        "scope": "header"
+    },
+    "defendant_dob": {
+        "category": "when",
+        "method": "regex",
+        "patterns": [
+            "(?:Lahir|Tanggal\\s+Lahir|Umur)[\\s\\w/]*[:\\s-]+(\\d{1,2}\\s+(?:Januari|Februari|Maret|April|Mei|Juni|Juli|Agustus|September|Oktober|November|Desember)\\s+\\d{4})",
+            "(?:Lahir|Tanggal\\s+Lahir|Umur)[\\s\\w/]*[:\\s-]+(\\d{1,2}[-/]\\d{1,2}[-/]\\d{4})"
+        ],
+        "scope": "header"
+    },
+    "defendant_nik": {
+        "category": "who",
+        "method": "regex",
+        "patterns": [
+            "NIK\\s*[:\\-]?\\s*(\\d{16})"
+        ],
+        "scope": "header"
+    },
+    "defendant_passport_no": {
+        "category": "who",
+        "method": "regex",
+        "patterns": [
+            "(?:Nomor\\s+)?Paspor\\s*[:\\-]?\\s*([A-Z]\\d{6,8})"
+        ],
+        "scope": "header"
+    },
+    "defendant_kk_no": {
+        "category": "who",
+        "method": "regex",
+        "patterns": [
+            "(?:Nomor\\s+)?(?:Kartu\\s+Keluarga|KK)\\s*[:\\-]?\\s*(\\d{16})"
+        ],
+        "scope": "header"
+    },
+    "defendant_education_status": {
+        "category": "who",
+        "method": "regex",
+        "patterns": [
+            "Pendidikan\\s*[:\\-]?\\n?\\s*([^\\n]+)"
+        ],
+        "scope": "header"
+    },
+    "indictment_date": {
+        "category": "when",
+        "method": "regex",
+        "patterns": [
+            "(?:Surat\\s+Dakwaan|Dakwaan\\s+tanggal|didakwa[\\s\\w]*tanggal)\\s*[:\\s-]*(\\d{1,2}\\s+(?:Januari|Februari|Maret|April|Mei|Juni|Juli|Agustus|September|Oktober|November|Desember)\\s+\\d{4})",
+            "(?:Surat\\s+Dakwaan|Dakwaan\\s+tanggal|didakwa[\\s\\w]*tanggal)\\s*[:\\s-]*(\\d{1,2}[-/]\\d{1,2}[-/]\\d{4})"
+        ],
+        "scope": "header"
+    },
+    "court_location": {
+        "category": "where",
+        "method": "regex",
+        "patterns": [
+            "Pengadilan\\s+Negeri\\s+([A-Za-z\\s]+?)(?:\\s+Yang\\s+Mengadili|\\s+Nomor|\\s+tanggal|\\s+Kelas)",
+            "Pengadilan\\s+Negeri\\s+([A-Za-z\\s]+?)(?=\\s*\\n)"
+        ],
+        "scope": "header"
+    },
+    "defendant_address": {
+        "category": "where",
+        "method": "regex",
+        "patterns": [
+            "Tempat\\s+Tinggal\\s*[:\\-]?\\s*([^;]+?)(?=Agama|Pekerjaan|Pendidikan|\\n\\n)",
+            "Alamat\\s*[:\\-]?\\s*([^;]+?)(?=Agama|Pekerjaan|Pendidikan|\\n\\n)",
+            "beralamat\\s+di\\s+([^;]+?)(?=Agama|Pekerjaan|;)",
+            "bertempat\\s+tinggal\\s+di\\s+([^;]+?)(?=Agama|Pekerjaan|;)"
+        ],
+        "scope": "header"
+    },
+    "defendant_occupation": {
+        "category": "what",
+        "method": "regex",
+        "patterns": [
+            "Pekerjaan\\s*[:\\-]?\\s*([^\\n]+?)(?:\\s+Pendidikan|\\n|$)"
+        ],
+        "scope": "header"
+    },
+    "defendant_age": {
+        "category": "how_many",
+        "method": "regex",
+        "patterns": [
+            "(?:Umur[^:]*:\\s*)?(\\d+)\\s+[Tt]ahun[/\\s]+(\\d{1,2}\\s+\\w+\\s+\\d{4})"
+        ],
+        "scope": "header"
+    },
+    "defendant_count": {
+        "category": "how_many",
+        "method": "llm",
+        "scope": "header",
+        "type": "integer",
+        "description": "Hitung jumlah terdakwa dalam perkara ini. Biasanya 1, tapi bisa lebih jika ada Terdakwa I, Terdakwa II, dst."
+    },
+    "detention_location": {
+        "category": "where",
+        "method": "regex",
+        "patterns": [
+            "ditahan\\s+di\\s+(Rutan|Lapas|Rumah\\s+Tahanan\\s+Negara[\\w\\s]+)(?:\\s+oleh|;)",
+            "ditahan\\s+dalam\\s+tahanan\\s+(Rumah\\s+tahanan\\s+Negara)"
+        ],
+        "scope": "header"
+    },
+    "witness_count": {
+        "category": "how_many",
+        "method": "regex",
+        "patterns": [
+            "\\bSaksi\\s+(?:I|II|III|IV|V|VI|VII|VIII|IX|X|\\d+)?\\s*[:\\-]?\\s*([A-Z][A-Za-z\\s\\.\\']{2,100}?)(?=\\s*,?\\s*(?:di\\s+bawah\\s+sumpah|menerangkan|yang\\s+pada\\s+pokoknya|memberikan\\s+keterangan))"
+        ],
+        "scope": "body"
+    },
+    "charge_count": {
+        "category": "how_many",
+        "method": "regex",
+        "patterns": [
+            "\\b(Pertama|Kedua|Ketiga|Keempat|Kelima|Kesatu|Primair|Subsidair|Tunggal)\\b"
+        ],
+        "scope": "dakwaan"
+    },
+    "prison_term": {
+        "category": "how_much",
+        "method": "regex",
+        "patterns": [
+            "pidana\\s+penjara\\s+selama\\s+(\\d+)\\s+\\([^\\)]+\\)\\s+tahun(?:\\s+dan\\s+(\\d+)\\s+\\([^\\)]+\\)\\s+bulan)?",
+            "penjara\\s+selama\\s+(\\d+)\\s+tahun",
+            "dipidana\\s+penjara\\s+(\\d+)\\s+tahun",
+            "selama\\s+(\\d+)\\s+\\([^\\)]+\\)\\s+(?:tahun|bulan)"
+        ],
+        "scope": "footer"
+    },
+    "monetary_penalties": {
+        "category": "how_much",
+        "method": "regex",
+        "patterns": [
+            "denda\\s+(?:sejumlah|sebesar)?\\s*Rp\\.?\\s*(\\d+(?:\\.\\d{3})*(?:,\\d+)?)-?"
+        ],
+        "scope": "footer"
+    },
+    "seized_money_amount": {
+        "category": "how_much",
+        "method": "regex",
+        "patterns": [
+            "(?:uang\\s+tunai|uang\\s+cash)\\s+(?:sejumlah|sebesar)?\\s*Rp\\.?\\s*(\\d+(?:\\.\\d{3})*(?:,\\d+)?)-?",
+            "dirampas\\s+untuk\\s+(?:negara|kas\\s+negara)[^Rp]{0,50}Rp\\.?\\s*(\\d+(?:\\.\\d{3})*(?:,\\d+)?)-?",
+            "(?:menerima|mengirim|mentransfer|mengirimkan)\\s+(?:uang\\s+)?(?:sejumlah|sebesar)?\\s*Rp\\.?\\s*(\\d+(?:\\.\\d{3})*(?:,\\d+)?)-?",
+            "(?:pendanaan|dana)\\s+(?:sejumlah|sebesar)?\\s*Rp\\.?\\s*(\\d+(?:\\.\\d{3})*(?:,\\d+)?)-?"
+        ],
+        "scope": "footer"
+    },
+    "detention_credit": {
+        "category": "what",
+        "method": "regex",
+        "patterns": [
+            "(?:penangkapan|penahanan)[\\s\\w,]* (?:dikurangkan|diperhitungkan)\\s+seluruhnya"
+        ],
+        "scope": "footer"
+    },
+    "evidence_item_count": {
+        "category": "how_many",
+        "method": "llm",
+        "scope": "footer",
+        "type": "integer",
+        "description": "Hitung jumlah total semua item barang bukti yang tercantum di bagian 'Menetapkan barang bukti'."
+    },
+    "indictment_model": {
+        "category": "what",
+        "method": "llm",
+        "scope": "body",
+        "type": "string",
+        "description": "Identifikasi bentuk/model dakwaan (Tunggal, Alternatif, Subsidair, Kumulatif). Cukup sebutkan jenisnya saja."
+    },
+    "charged_articles": {
+        "category": "what",
+        "method": "llm",
+        "scope": "body",
+        "type": "array",
+        "description": "Daftarkan semua PASAL yang didakwakan (contoh: Pasal 15 UU Terorisme). Jika ada Primair/Subsidair, pisahkan."
+    },
+    "proven_offense": {
+        "category": "what",
+        "method": "llm",
+        "scope": "footer",
+        "type": "string",
+        "description": "Tuliskan kualifikasi tindak pidana yang dinyatakan TERBUKTI (contoh: 'Permufakat jahat melakukan terorisme'). Ambil dari bagian AMAR PUTUSAN."
+    },
+    "verdict_per_charge": {
+        "category": "what",
+        "method": "llm",
+        "scope": "footer",
+        "type": "string",
+        "description": "Tulis status setiap dakwaan: 'Terbukti' atau 'Tidak Terbukti' (Bebas). Contoh: 'Primair: Terbukti, Subsidair: Tidak Terbukti'."
+    },
+    "aggravating_factors": {
+        "category": "why",
+        "method": "llm",
+        "scope": "body",
+        "type": "array",
+        "description": "Poin-poin Keadaan yang MEMBERATKAN (misal: meresahkan masyarakat)."
+    },
+    "mitigating_factors": {
+        "category": "why",
+        "method": "llm",
+        "scope": "body",
+        "type": "array",
+        "description": "Poin-poin Keadaan yang MERINGANKAN (misal: menyesali perbuatan, tulang punggung keluarga)."
+    },
+    "defendant_ideology_affiliation": {
+        "category": "who",
+        "method": "llm",
+        "scope": "body",
+        "type": "string",
+        "description": "Nama kelompok/jaringan (JAD, JI, ISIS, MIT). Atau 'Tidak Diketahui' jika tidak ada."
+    },
+    "defendant_local_network": {
+        "category": "who",
+        "method": "llm",
+        "scope": "body",
+        "type": "string",
+        "description": "Nama sel/kelompok lokal atau halaqah spesifik."
+    },
+    "has_attack_plan": {
+        "category": "what",
+        "method": "llm",
+        "scope": "body",
+        "type": "boolean",
+        "description": "Apakah terdakwa terbukti memiliki rencana serangan? Jawab 'Ya' atau 'Tidak'."
+    },
+    "attack_preparation_activities": {
+        "category": "how",
+        "method": "llm",
+        "scope": "body",
+        "type": "array",
+        "description": "Daftar kegiatan persiapan aksi (latihan militer, merakit bom, survei target, kumpulkan dana)."
+    },
+    "attack_plan_summary": {
+        "category": "what",
+        "method": "llm",
+        "scope": "body",
+        "type": "string",
+        "description": "Ringkas target dan metode serangan (bom bunuh diri, senjata tajam, dsb)."
+    },
+    "radicalization_sources": {
+        "category": "why",
+        "method": "llm",
+        "scope": "body",
+        "type": "array",
+        "description": "Sumber terpapar paham radikal (kajian ustaz, grup Telegram, Facebook, buku, pengaruh keluarga)."
+    },
+    "activity_locations": {
+        "category": "where",
+        "method": "llm",
+        "scope": "body",
+        "type": "array",
+        "description": "Lokasi aktivitas (kajian rahasia, baiat, latihan fisik). Nama daerah/gunung jika ada."
+    },
+    "crime_time_range": {
+        "category": "when",
+        "method": "llm",
+        "scope": "body",
+        "type": "string",
+        "description": "Rentang waktu terdakwa aktif bergabung hingga ditangkap (contoh: 'Januari 2018 - Juli 2019')."
+    },
+    "reasoning_evidence": {
+        "category": "why",
+        "method": "llm",
+        "scope": "body",
+        "type": "string",
+        "description": "Ringkas pertimbangan hukum hakim mengapa unsur-unsur terpenuhi."
+    },
+    "reasoning_appeal": {
+        "category": "why",
+        "method": "llm",
+        "scope": "body",
+        "type": "string",
+        "description": "Khusus PT/Kasasi/PK: Ringkas alasan menolak/menerima permohonan. Kalau PN, tulis 'N/A'."
+    },
+    "motivation_factors": {
+        "category": "why",
+        "method": "llm",
+        "scope": "body",
+        "type": "array",
+        "description": "Motivasi pribadi (ingin mati syahid, balas dendam, ikut-ikutan)."
+    },
+    "evidence_items": {
+        "category": "what",
+        "method": "llm",
+        "scope": "footer",
+        "type": "array",
+        "description": "Daftar barang bukti dalam Amar Putusan."
+    },
+    "evidence_disposition": {
+        "category": "what",
+        "method": "llm",
+        "scope": "footer",
+        "type": "string",
+        "description": "Status barang bukti: 'Dirampas untuk dimusnahkan', 'Dikembalikan ke Terdakwa', 'Dirampas untuk Negara'."
+    },
+    "appellate_outcome": {
+        "category": "what",
+        "method": "llm",
+        "scope": "footer",
+        "type": "string",
+        "description": "Hasil putusan Banding/Kasasi/PK: 'Menguatkan', 'Membatalkan', 'Menolak', 'Mengubah'. Kalau PN, tulis 'N/A'."
+    },
+    "detention_timeline": {
+        "category": "when",
+        "method": "llm",
+        "scope": "header",
+        "type": "string",
+        "description": "Riwayat penahanan (Penyidik/PU/Hakim) dengan tanggal mulai-selesai."
+    },
+    "appeal_timeline": {
+        "category": "when",
+        "method": "llm",
+        "scope": "header",
+        "type": "string",
+        "description": "Khusus PT/Kasasi/PK: Tanggal pengajuan upaya hukum. Kalau PN, tulis 'N/A'."
+    },
+    "defendant_names": {
+        "category": "who",
+        "method": "llm",
+        "scope": "header",
+        "type": "string",
+        "description": "Nama lengkap terdakwa beserta alias (contoh: Ahmad alias Abu Fulan)."
+    },
+    "judges": {
+        "category": "who",
+        "method": "llm",
+        "scope": "footer",
+        "type": "array",
+        "description": "Nama Majelis Hakim (Hakim Ketua dan Anggota)."
+    },
+    "clerk": {
+        "category": "who",
+        "method": "llm",
+        "scope": "footer",
+        "type": "string",
+        "description": "Nama Panitera Pengganti."
+    },
+    "prosecutors": {
+        "category": "who",
+        "method": "llm",
+        "scope": "footer",
+        "type": "string",
+        "description": "Nama Penuntut Umum (Jaksa)."
+    },
+    "defense_counsels": {
+        "category": "who",
+        "method": "llm",
+        "scope": "header",
+        "type": "string",
+        "description": "Nama tim Penasihat Hukum/Advokat. Atau 'Tidak Didampingi' kalau tidak ada."
+    },
+    "witnesses": {
+        "category": "who",
+        "method": "llm",
+        "scope": "body",
+        "type": "array",
+        "description": "Nama saksi dan ahli yang memberikan keterangan."
+    }
+}
