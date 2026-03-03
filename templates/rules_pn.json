@@ -28,7 +28,7 @@
     "defendants": {
         "category": "who",
         "method": "llm",
-        "scope": "header",
+        "scope": "identitas",
         "type": "array",
         "description": "Ekstrak informasi untuk SETIAP terdakwa secara utuh. Kembalikan dalam bentuk list/array of objects. Setiap objek WAJIB memiliki key: 'name', 'alias', 'gender', 'pob' (tempat lahir), 'dob' (tanggal lahir beserta tahun), 'age', 'religion', 'nationality', 'occupation', 'education_status', 'address', 'nik', 'passport_no', 'kk_no'. Jika data spesifik tidak disebutkan di teks, isi dengan null. Jika hanya 1 terdakwa, kembalikan array dengan 1 objek."
     },
@@ -64,7 +64,7 @@
             "ditahan\\s+di\\s+(Rutan|Lapas|Rumah\\s+Tahanan\\s+Negara[\\w\\s]+)(?:\\s+oleh|;)",
             "ditahan\\s+dalam\\s+tahanan\\s+(Rumah\\s+tahanan\\s+Negara)"
         ],
-        "scope": "header"
+        "scope": "penahanan"
     },
     "witness_count": {
         "category": "how_many",
@@ -130,14 +130,14 @@
     "indictment_model": {
         "category": "what",
         "method": "llm",
-        "scope": "body",
+        "scope": "dakwaan",
         "type": "string",
         "description": "Identifikasi bentuk/model dakwaan (Tunggal, Alternatif, Subsidair, Kumulatif). Cukup sebutkan jenisnya saja."
     },
     "charged_articles": {
         "category": "what",
         "method": "llm",
-        "scope": "body",
+        "scope": "dakwaan",
         "type": "array",
         "description": "Daftarkan semua PASAL yang didakwakan (contoh: Pasal 15 UU Terorisme). Jika ada Primair/Subsidair, pisahkan."
     },
@@ -214,14 +214,14 @@
     "activity_locations": {
         "category": "where",
         "method": "llm",
-        "scope": "body",
+        "scope": "dakwaan",
         "type": "array",
         "description": "Lokasi aktivitas (kajian rahasia, baiat, latihan fisik). Nama daerah/gunung jika ada."
     },
     "crime_time_range": {
         "category": "when",
         "method": "llm",
-        "scope": "body",
+        "scope": "dakwaan",
         "type": "string",
         "description": "Rentang waktu terdakwa aktif bergabung hingga ditangkap (contoh: 'Januari 2018 - Juli 2019')."
     },
@@ -270,7 +270,7 @@
     "detention_timeline": {
         "category": "when",
         "method": "llm",
-        "scope": "header",
+        "scope": "penahanan",
         "type": "string",
         "description": "Riwayat penahanan (Penyidik/PU/Hakim) dengan tanggal mulai-selesai."
     },

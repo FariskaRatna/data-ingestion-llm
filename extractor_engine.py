@@ -94,6 +94,26 @@ class BaseExtractor:
         footer_start_match = re.search(r'\n\s*(MENGADILI|MEMUTUSKAN)\s*\n', text, re.IGNORECASE)
         footer_start_idx = footer_start_match.start() if footer_start_match else len(text) - 5000
 
+        header_text = text[:body_start_idx]
+        body_text = text[body_start_idx:footer_start_idx]
+        footer_text = text[footer_start_idx:]
+
+        identitas_start = re.search(r'(?:perkara\s+Terdakwa|perkara\s+Para\s+Terdakwa|perkara\s+Terdakwa\s*:|:)\s*', header_text, re.IGNORECASE)
+        penahanan_start = re.search(r'(Terdakwa\s+ditahan|Para\s+Terdakwa\s+ditahan|Terdakwa\s+ditangkap|Terdakwa\s+berada\s+dalam\s+tahanan)', header_text, re.IGNORECASE)
+
+        identitas_text = ""
+        penahanan_start = ""
+
+        if identitas_start:
+            start_idx = identitas_start.end()
+            end_idx = penahanan_start.start() if penahanan_start else len(header_text)
+            identitas_text = header_text[start_idx:end_idx].strip()
+
+            if penahanan_start:
+                penahanan_text = header_text[penahanan_start.start():].strip()
+        else:
+            identitas_text = header_text
+
         dakwaan_match = re.search(
             r'(DAKWAAN:.*?)((?=Menimbang, bahwa terhadap dakwaan)|(?=MENGADILI))',
             text, re.DOTALL | re.IGNORECASE
@@ -101,9 +121,11 @@ class BaseExtractor:
         dakwaan_section = dakwaan_match.group(1) if dakwaan_match else ""
 
         return {
-            "header": text[:body_start_idx],
-            "body": text[body_start_idx:footer_start_idx],
-            "footer": text[footer_start_idx:],
+            "header": header_text,
+            "identitas": identitas_text,
+            "penahanan": penahanan_text,
+            "body": body_text,
+            "footer": footer_text,
             "full": text,
             "dakwaan": dakwaan_section
         }
