@@ -268,7 +268,7 @@
         "description": "Apakah terdakwa terbukti memiliki rencana serangan? Jawab 'Ya' atau 'Tidak'."
     },
     "attack_preparation_activities": {
-        "category": "how",
+        "category": "what",
         "method": "llm",
         "scope": "body",
         "type": "array",
