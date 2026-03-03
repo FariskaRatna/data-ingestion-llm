@@ -25,68 +25,12 @@
         ],
         "scope": "header"
     },
-    "defendant_gender": {
+    "defendants": {
         "category": "who",
         "method": "llm",
         "scope": "header",
         "type": "array",
-        "description": "Ekstrak jenis kelamin untuk SETIAP terdakwa. Kembalikan sebagai sebuah list/array. Contoh: [\"Laki-laki\", \"Perempuan\"]"
-    },
-    "defendant_religion": {
-        "category": "who",
-        "method": "llm",
-        "scope": "header",
-        "type": "array",
-        "description": "Ekstrak agama untuk SETIAP terdakwa. Kembalikan sebagai sebuah list/array. Contoh: [\"Islam\", \"Kristen\"]"
-    },
-    "defendant_nationality": {
-        "category": "who",
-        "method": "llm",
-        "scope": "header",
-        "type": "array",
-        "description": "Ekstrak kebangsaan untuk SETIAP terdakwa. Kembalikan sebagai sebuah list/array. Contoh: [\"Indonesia\"]"
-    },
-    "defendant_pob": {
-        "category": "who",
-        "method": "llm",
-        "scope": "header",
-        "type": "array",
-        "description": "Ekstrak tempat lahir untuk SETIAP terdakwa. Kembalikan sebagai sebuah list/array. Contoh: [\"Jakarta\", \"Bandung\"]"
-    },
-    "defendant_dob": {
-        "category": "when",
-        "method": "llm",
-        "scope": "header",
-        "type": "array",
-        "description": "Ekstrak tanggal lahir (format YYYY-MM-DD) untuk SETIAP terdakwa. Kembalikan sebagai sebuah list/array. Contoh: [\"1990-01-15\", \"1992-03-20\"]"
-    },
-    "defendant_nik": {
-        "category": "who",
-        "method": "llm",
-        "scope": "header",
-        "type": "array",
-        "description": "Ekstrak NIK (Nomor Induk Kependudukan) untuk SETIAP terdakwa. Kembalikan sebagai sebuah list/array."
-    },
-    "defendant_passport_no": {
-        "category": "who",
-        "method": "llm",
-        "scope": "header",
-        "type": "array",
-        "description": "Ekstrak nomor paspor untuk SETIAP terdakwa. Kembalikan sebagai sebuah list/array."
-    },
-    "defendant_kk_no": {
-        "category": "who",
-        "method": "llm",
-        "scope": "header",
-        "type": "array",
-        "description": "Ekstrak nomor Kartu Keluarga (KK) untuk SETIAP terdakwa. Kembalikan sebagai sebuah list/array."
-    },
-    "defendant_education_status": {
-        "category": "who",
-        "method": "llm",
-        "scope": "header",
-        "type": "array",
-        "description": "Ekstrak pendidikan terakhir untuk SETIAP terdakwa. Kembalikan sebagai sebuah list/array. Contoh: [\"SMA\", \"S1\"]"
+        "description": "Ekstrak informasi untuk SETIAP terdakwa secara utuh. Kembalikan dalam bentuk list/array of objects. Setiap objek WAJIB memiliki key: 'name', 'alias', 'gender', 'pob' (tempat lahir), 'dob' (tanggal lahir beserta tahun), 'age', 'religion', 'nationality', 'occupation', 'education_status', 'address', 'nik', 'passport_no', 'kk_no'. Jika data spesifik tidak disebutkan di teks, isi dengan null. Jika hanya 1 terdakwa, kembalikan array dengan 1 objek."
     },
     "indictment_date": {
         "category": "when",
@@ -105,27 +49,6 @@
             "Pengadilan\\s+Negeri\\s+([A-Za-z\\s]+?)(?=\\s*\\n)"
         ],
         "scope": "header"
-    },
-    "defendant_address": {
-        "category": "where",
-        "method": "llm",
-        "scope": "header",
-        "type": "array",
-        "description": "Ekstrak alamat lengkap untuk SETIAP terdakwa. Kembalikan sebagai sebuah list/array."
-    },
-    "defendant_occupation": {
-        "category": "what",
-        "method": "llm",
-        "scope": "header",
-        "type": "array",
-        "description": "Ekstrak pekerjaan untuk SETIAP terdakwa. Kembalikan sebagai sebuah list/array. Contoh: [\"Wiraswasta\", \"Petani\"]"
-    },
-    "defendant_age": {
-        "category": "how_many",
-        "method": "llm",
-        "scope": "header",
-        "type": "array",
-        "description": "Ekstrak umur dalam tahun untuk SETIAP terdakwa. Kembalikan sebagai sebuah list/array berisi angka. Contoh: [38, 41]"
     },
     "defendant_count": {
         "category": "how_many",
@@ -357,13 +280,6 @@
         "scope": "header",
         "type": "string",
         "description": "Khusus PT/Kasasi/PK: Tanggal pengajuan upaya hukum. Kalau PN, tulis 'N/A'."
-    },
-    "defendant_names": {
-        "category": "who",
-        "method": "llm",
-        "scope": "header",
-        "type": "array",
-        "description": "Ekstrak nama lengkap beserta alias untuk SETIAP terdakwa. Kembalikan sebagai sebuah list/array. Contoh: [\"Ahmad alias Abu Fulan\", \"Budi Santoso\"]"
     },
     "judges": {
         "category": "who",
