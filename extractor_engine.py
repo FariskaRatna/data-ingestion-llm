@@ -169,7 +169,7 @@ class BaseExtractor:
                     },
                 ],
                 temperature=0.0,
-                max_tokens=800,
+                max_tokens=2048,
             )
 
             res_text = response.choices[0].message.content.strip()

@@ -158,7 +158,35 @@ def main():
                 "defendant_age"
                 "defendant_passport_no",
                 "defendant_kk_no"
-                "defendant_address"
+                "defendant_address",
+                "defendant_education_status",
+                "defendant_age",
+                "defendant_count",
+                "evidence_item_count",
+                "verdict_per_charge",
+                "aggravating_factors",
+                "mitigating_factors",
+                "defendant_ideology_affiliation",
+                "defendant_local_network",
+                "has_attack_plan",
+                "attack_preparation_activities",
+                "attack_plan_summary",
+                "radicalization_sources",
+                "activity_locations",
+                "crime_time_range",
+                "reasoning_evidence",
+                "reasoning_appeal",
+                "motivation_factors",
+                "evidence_items",
+                "evidence_disposition",
+                "appellate_outcome",
+                "detention_timeline",
+                "appeal_timeline",
+                "judges",
+                "clerk",
+                "prosecutors",
+                "defense_counsels",
+                "witnesses"
             ]
 
             extractor = BaseExtractor(
