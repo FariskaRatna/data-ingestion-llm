@@ -35,6 +35,9 @@ class BaseExtractor:
         # Jika diisi, hanya field LLM di daftar ini yang akan diekstrak via LLM
         self.llm_fields = llm_fields
 
+        # Placeholder: Inisialisasi model IndoBERT jika ada
+        # self.ner_model = IndoBERT_NER_Model()
+
         self.rules = {}
         if template_path:
             with open(template_path, 'r', encoding='utf-8') as f:
@@ -102,15 +105,15 @@ class BaseExtractor:
         penahanan_start = re.search(r'(Terdakwa\s+ditahan|Para\s+Terdakwa\s+ditahan|Terdakwa\s+ditangkap|Terdakwa\s+berada\s+dalam\s+tahanan)', header_text, re.IGNORECASE)
 
         identitas_text = ""
-        penahanan_start = ""
+        penahanan_text = ""
 
         if identitas_start:
             start_idx = identitas_start.end()
             end_idx = penahanan_start.start() if penahanan_start else len(header_text)
             identitas_text = header_text[start_idx:end_idx].strip()
 
-            if penahanan_start:
-                penahanan_text = header_text[penahanan_start.start():].strip()
+        if penahanan_start:
+            penahanan_text = header_text[penahanan_start.start():].strip()
         else:
             identitas_text = header_text
 
@@ -183,6 +186,11 @@ class BaseExtractor:
                             "Tugas Anda adalah mengekstrak informasi spesifik dari putusan pengadilan Indonesia. "
                             "Jawab secara singkat, padat, dan persis seperti yang diminta di instruksi. "
                             "Jangan memberikan penjelasan tambahan jika tidak diminta."
+                            "Ekstrak hanya informasi yang secara eksplisit tertulis dalam teks."
+                            "Jangan melakukan inferensi, generalisasi, atau interpretasi."
+                            "Jika informasi tidak disebutkan secara jelas dan eksplisit, isi dengan null."
+                            "Jangan menggunakan pengetahuan eksternal."
+                            "Untuk setiap field berbasis teks (string/array), gunakan kutipan langsung dari teks asli tanpa parafrase kecuali diminta untuk ringkasan."
                         ),
                     },
                     {
@@ -191,7 +199,7 @@ class BaseExtractor:
                     },
                 ],
                 temperature=0.0,
-                max_tokens=2048,
+                max_tokens=4096,
             )
 
             res_text = response.choices[0].message.content.strip()
@@ -423,6 +431,23 @@ Kembalikan SATU objek JSON dengan field tepat seperti contoh struktur di bawah i
     def run_extraction(self):
         """Orkestrasi utama hybrid (regex dulu, lalu LLM batched per-scope)."""
         self.log(f"\n🚀 Memulai ekstraksi dengan {len(self.rules)} aturan...")
+
+        # ======================================================================
+        # TAHAP BARU (KONSEPTUAL): Pra-pemrosesan dengan IndoBERT/NER
+        # ======================================================================
+        # Di sini Anda bisa menjalankan model NER (seperti IndoBERT) sekali pada
+        # seluruh teks untuk mengekstrak entitas umum seperti nama orang,
+        # organisasi, dan lokasi.
+        #
+        # if hasattr(self, 'ner_model'):
+        #     self.log("\n   🔬 Menjalankan pra-ekstraksi entitas dengan NER...")
+        #     ner_results = self.ner_model.extract_entities(self.text)
+        #     # Contoh: Jika NER menemukan nama hakim dengan confidence tinggi
+        #     if 'judges' in ner_results and ner_results['judges']['confidence'] > 0.9:
+        #         self._add_field('who', 'judges', ner_results['judges']['value'],
+        #                         confidence=ner_results['judges']['confidence'], source='ner')
+        #         # Hapus 'judges' dari daftar yang akan diproses LLM untuk efisiensi
+        #         self.rules.pop('judges', None)
 
         # 1) Jalankan field berbasis regex
         for field_name, rule in self.rules.items():

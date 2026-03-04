@@ -146,7 +146,8 @@ def main():
                 "indictment_model",
                 "charged_articles",
                 "proven_offense",
-                "defendants"
+                "defendants",
+                "co_defendants",
                 "evidence_items",
                 "defendant_count",
                 "evidence_item_count",

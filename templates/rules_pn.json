@@ -32,6 +32,13 @@
         "type": "array",
         "description": "Ekstrak informasi untuk SETIAP terdakwa secara utuh. Kembalikan dalam bentuk list/array of objects. Setiap objek WAJIB memiliki key: 'name', 'alias', 'gender', 'pob' (tempat lahir), 'dob' (tanggal lahir beserta tahun), 'age', 'religion', 'nationality', 'occupation', 'education_status', 'address', 'nik', 'passport_no', 'kk_no'. Jika data spesifik tidak disebutkan di teks, isi dengan null. Jika hanya 1 terdakwa, kembalikan array dengan 1 objek."
     },
+    "co_defendants": {
+        "category": "who",
+        "method": "llm",
+        "scope": "dakwaan",
+        "type": "array",
+        "description": "Ekstrak nama pelaku lain (kawan peserta/accomplice) yang ikut melakukan tindak pidana bersama terdakwa. Biasanya ditandai dengan frasa 'bersama-sama dengan', 'dilakukan penuntutan secara terpisah', atau 'berkas terpisah'. JANGAN masukkan nama terdakwa utama, korban, atau saksi polisi. Jika tidak ada pelaku lain, kembalikan array kosong."
+    },
     "indictment_date": {
         "category": "when",
         "method": "regex",
