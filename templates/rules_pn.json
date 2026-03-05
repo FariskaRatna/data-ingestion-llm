@@ -127,10 +127,27 @@
         ],
         "scope": "footer"
     },
+    "district_court_date": {
+        "category": "when",
+        "method": "regex",
+        "scope": "footer",
+        "patterns": [
+            "Diputuskan\\s+dalam\\s+sidang\\s+permusyawaratan.*?[,\\s]+tanggal\\s+([0-9]{1,2}\\s+[a-zA-Z]+\\s+[0-9]{4})",
+            "Ditetapkan\\s+di\\s+[a-zA-Z\\s]+[,]\\s+pada\\s+tanggal\\s+([0-9]{1,2}\\s+[a-zA-Z]+\\s+[0-9]{4})"
+        ]
+    },
+    "district_court": {
+        "category": "where",
+        "method": "regex",
+        "scope": "header",
+        "patterns": [
+            "(Pengadilan\\s+Negeri\\s+[A-Za-z\\s]+?)(?:\\s+yang|\\s+Nomor|\\s+tanggal|\\s+Kelas)"
+        ]
+    },
     "evidence_item_count": {
         "category": "how_many",
         "method": "llm",
-        "scope": "footer",
+        "scope": "evidence",
         "type": "integer",
         "description": "Hitung jumlah total semua item barang bukti yang tercantum di bagian 'Menetapkan barang bukti'."
     },
@@ -165,14 +182,14 @@
     "aggravating_factors": {
         "category": "why",
         "method": "llm",
-        "scope": "body",
+        "scope": "factors",
         "type": "array",
         "description": "Poin-poin Keadaan yang MEMBERATKAN (misal: meresahkan masyarakat)."
     },
     "mitigating_factors": {
         "category": "why",
         "method": "llm",
-        "scope": "body",
+        "scope": "factors",
         "type": "array",
         "description": "Poin-poin Keadaan yang MERINGANKAN (misal: menyesali perbuatan, tulang punggung keluarga)."
     },
@@ -181,14 +198,14 @@
         "method": "llm",
         "scope": "body",
         "type": "string",
-        "description": "Nama kelompok/jaringan (JAD, JI, ISIS, MIT). Atau 'Tidak Diketahui' jika tidak ada."
+        "description": "Sebutkan hanya nama kelompok/jaringan (JAD, JI, ISIS, MIT, Al-Qaedah, ISIL, dan sebagainya). Atau 'Tidak Diketahui' jika tidak ada. Jangan tampilkan hasi kosong"
     },
     "defendant_local_network": {
         "category": "who",
         "method": "llm",
         "scope": "body",
         "type": "string",
-        "description": "Nama sel/kelompok lokal atau halaqah spesifik."
+        "description": "Lokasi nama kelompok tersebut berada di provinsi mana atau wilayah mana."
     },
     "has_attack_plan": {
         "category": "what",
@@ -228,9 +245,9 @@
     "crime_time_range": {
         "category": "when",
         "method": "llm",
-        "scope": "dakwaan",
+        "scope": "body",
         "type": "string",
-        "description": "Rentang waktu terdakwa aktif bergabung hingga ditangkap (contoh: 'Januari 2018 - Juli 2019')."
+        "description": "Rentang waktu kejahatan (contoh: 'Januari 2018 - Juli 2019' atau bisa tahun saja maupun tanggal secara spesifik, jangan dikosongkan kalau bisa)."
     },
     "reasoning_evidence": {
         "category": "why",
@@ -256,16 +273,16 @@
     "evidence_items": {
         "category": "what",
         "method": "llm",
-        "scope": "footer",
-        "type": "array",
-        "description": "Daftar barang bukti dalam Amar Putusan."
+        "scope": "evidence",
+        "output_format": "array",
+        "description": "Daftarkan semua barang bukti. Kembalikan HANYA dalam format list/array of objects yang berisi objek dengan isinya: 'quantity' (angka integer), 'unit' (string, contoh: 'buah', 'lembar'), dan 'description' (string, nama barangnya). Contoh: [{\"quantity\": 1, \"unit\": \"buah\", \"description\": \"kemasan Sim Card Telkomsel\"}]"
     },
     "evidence_disposition": {
         "category": "what",
         "method": "llm",
-        "scope": "footer",
-        "type": "string",
-        "description": "Status barang bukti: 'Dirampas untuk dimusnahkan', 'Dikembalikan ke Terdakwa', 'Dirampas untuk Negara'."
+        "scope": "evidence",
+        "output_format": "array",
+        "description": "Sebutkan status/nasib dari masing-masing barang bukti. Kembalikan HANYA dalam format list/array of objects yang berisi objek dengan isinya: 'unit' (string, tulis lengkap nama barang beserta jumlahnya) dan 'disposition' (string, contoh: 'dirampas untuk dimusnahkan', 'dikembalikan kepada terdakwa'). Contoh: [{\"unit\": \"1 (satu) buah kemasan Sim Card Telkomsel\", \"disposition\": \"dirampas untuk dimusnahkan\"}]"
     },
     "appellate_outcome": {
         "category": "what",
@@ -322,5 +339,63 @@
         "scope": "body",
         "type": "array",
         "description": "Nama saksi dan ahli yang memberikan keterangan."
+    },
+    "arrest_date": {
+        "category": "when",
+        "method": "llm",
+        "scope": "header",
+        "type": "string",
+        "description": "Cari tanggal penangkapan terdakwa oleh penyidik (Densus 88/Polri). Biasanya ada di riwayat penahanan. Kembalikan HANYA tanggalnya saja, contoh: '15 Januari 2019'."
+    },
+    "arrest_location": {
+        "category": "where",
+        "method": "llm",
+        "scope": "body",
+        "type": "string",
+        "description": "Di mana lokasi atau alamat terdakwa ditangkap oleh aparat? Sebutkan lokasinya secara ringkas (contoh: 'Rumah kontrakan di Jalan Mawar, Bekasi')."
+    },
+    "investigators": {
+        "category": "who",
+        "method": "llm",
+        "scope": "header",
+        "type": "string",
+        "description": "Siapa institusi atau pihak yang melakukan penyidikan dan penahanan pertama kali terhadap terdakwa? (contoh: 'Penyidik Densus 88 Anti Teror' atau 'Penyidik Polri')."
+    },
+    "defense_plea": {
+        "category": "what",
+        "method": "llm",
+        "scope": "body",
+        "type": "string",
+        "description": "Apa inti dari Nota Pembelaan (Pledoi) yang diajukan oleh Terdakwa atau Penasihat Hukumnya? (contoh: 'Memohon hukuman seringan-ringannya karena terdakwa tulang punggung keluarga'). Rangkum dalam 1 kalimat pendek."
+    },
+    "defendant_local_network_joined_at": {
+        "category": "when",
+        "method": "llm",
+        "scope": "body",
+        "type": "string",
+        "description": "Kapan terdakwa pertama kali bergabung, berbaiat, atau mulai aktif dalam jaringan/kelompok teror lokal tersebut? (contoh: 'Awal tahun 2016' atau 'Agustus 2018'). Jika tidak disebutkan jelas, jawab 'Tidak disebutkan'."
+    },
+    "injury_severity": {
+        "category": "how_much",
+        "method": "llm",
+        "scope": "body",
+        "type": "string",
+        "description": "Jika tindak pidana ini melibatkan serangan yang menimbulkan korban, sebutkan tingkat keparahan lukanya (contoh: 'Korban meninggal dunia', 'Luka berat', 'Tidak ada korban', dab sebagainya)."
+    },
+    "related_entities": {
+        "category": "who",
+        "method": "llm",
+        "scope": "body",
+        "type": "array",
+        "output_format": "json",
+        "description": "Daftarkan nama kelompok, organisasi, atau jaringan terorisme yang terafiliasi dengan terdakwa (contoh: 'JAD', 'JI', 'MIT', 'ISIS', dan sebagainya). Kembalikan HANYA dalam format array"
+    },
+    "defendant_chat_platform": {
+        "category": "what",
+        "method": "llm",
+        "scope": "body",
+        "type": "array",
+        "output_format": "json",
+        "description": "Daftarkan aplikasi pesan atau platform komunikasi yang digunakan terdakwa untuk merencanakan tindak pidana (contoh: 'Telegram', 'WhatsApp', 'Threema'). Kembalikan bentuk array"
     }
 }

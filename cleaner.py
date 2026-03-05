@@ -31,6 +31,8 @@ class PDFCleaner:
             r"(?i)halaman\s+\d+\s*$",
             r"(?i)hal\s+\d+\s+putusan\s+no\..*$",
             r"(?i)putusan\s+nomor\s+\d+.*$",
+            r"(?i)^\s*\d+\s+putusan\s+nomor\s+\d+.*$",  # contoh: '166 Putusan Nomor 303/...'
+            r"(?i)hal\s+\d+\s+dari\s+\d+\s+putusan\s+nomor\s+\d+.*",  # Hal 4 dari 166 Putusan Nomor 303/...
             r"(?i)untuk\s+salinan\s*$",
             r"(?i)ditandatangani\s+secara\s+elektronik",
             r"(?i)^ttd\.?\s*$",
@@ -49,6 +51,8 @@ class PDFCleaner:
             r"^\s*halaman\s+\d+\s+dari\s+\d+",
             r"^\s*halaman\s+\d+\s*$",
             r"^\s*hal\s+\d+\s+putusan\s+no\..*$",
+            r"^\s*\d+\s+Putusan\s+Nomor\s+\d+.*$",  # contoh: '166 Putusan Nomor 303/...'
+            r"^\s*hal\s+\d+\s+dari\s+\d+\s+putusan\s+nomor\s+\d+.*$",  # Hal 4 dari 166 Putusan Nomor 303/... (case-insensitive via re.IGNORECASE)
             r"^\s*disclaimer\s*$",
             r"^\s*kepaniteraan\s+mahkamah\s+agung",
             r"berusaha\s+untuk\s+selalu\s+mencantumkan",

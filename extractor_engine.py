@@ -91,18 +91,90 @@ class BaseExtractor:
         }
     
     def _split_sections(self, text) -> dict:
-        body_start_match = re.search(r'(Menimbang|TENTANG\s+DUDUK\s+PERKARA)', text, re.IGNORECASE)
-        body_start_idx = body_start_match.start() if body_start_match else 5000
+        """
+        Bagi dokumen menjadi beberapa bagian besar:
+        - header   : pembukaan + identitas + penahanan
+        - body     : duduk perkara & pertimbangan
+        - footer   : amar putusan (MENGADILI/MEMUTUSKAN)
+        - dakwaan  : jika ada bagian DAKWAAN yang eksplisit
 
-        footer_start_match = re.search(r'\n\s*(MENGADILI|MEMUTUSKAN)\s*\n', text, re.IGNORECASE)
-        footer_start_idx = footer_start_match.start() if footer_start_match else len(text) - 5000
+        Heuristik dibuat lebih fleksibel agar tahan terhadap variasi format,
+        dengan fallback berbasis persentase panjang dokumen jika marker tidak ditemukan.
+        """
+        text_len = len(text)
+
+        # -----------------------------------------
+        # 1. Tentukan awal BODY (duduk perkara / menimbang)
+        # -----------------------------------------
+        body_markers = [
+            r"\n\s*TENTANG\s+DUDUK\s+PERKARA",
+            r"\n\s*DUDUK\s+PERKARA",
+            r"\n\s*PERTIMBANGAN\s+HUKUM",
+            r"\n\s*PERTIMBANGAN\s+HUKUM\s+MAJELIS\s+HAKIM",
+            r"\n\s*Menimbang\s*,",
+            r"\n\s*MENIMBANG\s*,",
+        ]
+
+        body_start_idx = None
+        for pat in body_markers:
+            m = re.search(pat, text, re.IGNORECASE)
+            if m:
+                idx = m.start()
+                if body_start_idx is None or idx < body_start_idx:
+                    body_start_idx = idx
+
+        # Fallback: jika tidak ada marker, pakai ~25% panjang teks sebagai awal body
+        if body_start_idx is None:
+            body_start_idx = int(text_len * 0.25)
+
+        # -----------------------------------------
+        # 2. Tentukan awal FOOTER (amar putusan)
+        # -----------------------------------------
+        footer_markers = [
+            r"\n\s*AMAR\s+PUTUSAN",
+            r"\n\s*MENGADILI\s*:",
+            r"\n\s*MENGADILI\s*,",
+            r"\n\s*MENGADILI\s*\n",
+            r"\n\s*MEMUTUSKAN\s*,",
+            r"\n\s*MEMUTUSKAN\s*\n",
+            r"\n\s*M\s*E\s*N\s*G\s*A\s*D\s*I\s*L\s*I\s*:"
+            r"\n\s*M\s*E\s*N\s*G\s*A\s*D\s*I\s*L\s*I\s*,"
+        ]
+
+        footer_start_idx = None
+        search_region = text[body_start_idx:]
+        for pat in footer_markers:
+            m = re.search(pat, search_region, re.IGNORECASE)
+            if m:
+                idx = body_start_idx + m.start()
+                if footer_start_idx is None or idx < footer_start_idx:
+                    footer_start_idx = idx
+
+        # Fallback: jika tidak ada marker footer, pakai ~70% panjang teks
+        if footer_start_idx is None:
+            footer_start_idx = int(text_len * 0.7)
+
+        # Pastikan indeks terurut dan dalam rentang
+        body_start_idx = max(0, min(body_start_idx, text_len))
+        footer_start_idx = max(body_start_idx, min(footer_start_idx, text_len))
 
         header_text = text[:body_start_idx]
         body_text = text[body_start_idx:footer_start_idx]
         footer_text = text[footer_start_idx:]
 
-        identitas_start = re.search(r'(?:perkara\s+Terdakwa|perkara\s+Para\s+Terdakwa|perkara\s+Terdakwa\s*:|:)\s*', header_text, re.IGNORECASE)
-        penahanan_start = re.search(r'(Terdakwa\s+ditahan|Para\s+Terdakwa\s+ditahan|Terdakwa\s+ditangkap|Terdakwa\s+berada\s+dalam\s+tahanan)', header_text, re.IGNORECASE)
+        # -----------------------------------------
+        # 3. Potong HEADER menjadi identitas & penahanan (jika memungkinkan)
+        # -----------------------------------------
+        identitas_start = re.search(
+            r"(?:perkara\s+Terdakwa|perkara\s+Para\s+Terdakwa|perkara\s+Terdakwa\s*:|:)\s*",
+            header_text,
+            re.IGNORECASE,
+        )
+        penahanan_start = re.search(
+            r"(Terdakwa\s+ditahan|Para\s+Terdakwa\s+ditahan|Terdakwa\s+ditangkap|Terdakwa\s+berada\s+dalam\s+tahanan)",
+            header_text,
+            re.IGNORECASE,
+        )
 
         identitas_text = ""
         penahanan_text = ""
@@ -115,13 +187,46 @@ class BaseExtractor:
         if penahanan_start:
             penahanan_text = header_text[penahanan_start.start():].strip()
         else:
+            # Jika tidak ada blok penahanan eksplisit, treat seluruh header sebagai identitas
             identitas_text = header_text
 
+        # -----------------------------------------
+        # 4. Coba ekstrak bagian DAKWAAN jika tertulis eksplisit
+        # -----------------------------------------
         dakwaan_match = re.search(
-            r'(DAKWAAN:.*?)((?=Menimbang, bahwa terhadap dakwaan)|(?=MENGADILI))',
-            text, re.DOTALL | re.IGNORECASE
+            r"(DAKWAAN\s*:?.*?)(?=\n\s*Menimbang\s*,|\n\s*MENGADILI\b|\n\s*AMAR\s+PUTUSAN\b)",
+            text,
+            re.DOTALL | re.IGNORECASE,
         )
-        dakwaan_section = dakwaan_match.group(1) if dakwaan_match else ""
+        dakwaan_section = dakwaan_match.group(1).strip() if dakwaan_match else ""
+
+        # -----------------------------------------
+        # 5. Coba ekstrak bagian BARANG BUKTI (Hemat Token)
+        # -----------------------------------------
+        # Mencari blok barang bukti di dalam body untuk mengurangi token saat ekstraksi evidence_items
+        evidence_match = re.search(
+            r"(?:menetapkan\s+)?barang\s+bukti\s*(?:berupa|adalah|yang\s+diajukan)?\s*[:\.]?.*?(?=\n\s*(?:MENGADILI|Mengingat|Menimbang|Membebankan|Demikianlah))",
+            body_text,
+            re.DOTALL | re.IGNORECASE
+        )
+        evidence_section = evidence_match.group(0).strip() if evidence_match else ""
+
+        # -----------------------------------------
+        # 6. Coba ekstrak bagian FACTORS (Memberatkan/Meringankan)
+        # -----------------------------------------
+        # Bagian ini selalu ada di akhir body, sebelum Mengingat/Memutuskan.
+        # Kita cari dengan regex, jika gagal, ambil 4000 karakter TERAKHIR dari body.
+        factors_match = re.search(
+            r"(?:Keadaan|Hal-hal)\s+yang\s+(?:memberatkan|meringankan)[\s\S]*?(?=\n\s*(?:Mengingat|MENGADILI|MEMUTUSKAN|Menetapkan|Demikianlah))",
+            body_text,
+            re.IGNORECASE
+        )
+        
+        if factors_match:
+            factors_section = factors_match.group(0).strip()
+        else:
+            # Fallback: ambil 4000 karakter terakhir dari body (safe zone untuk putusan panjang)
+            factors_section = body_text[-4000:] if len(body_text) > 4000 else body_text
 
         return {
             "header": header_text,
@@ -130,7 +235,9 @@ class BaseExtractor:
             "body": body_text,
             "footer": footer_text,
             "full": text,
-            "dakwaan": dakwaan_section
+            "dakwaan": dakwaan_section,
+            "evidence": evidence_section,
+            "factors": factors_section,
         }
 
     
@@ -188,9 +295,9 @@ class BaseExtractor:
                             "Jangan memberikan penjelasan tambahan jika tidak diminta."
                             "Ekstrak hanya informasi yang secara eksplisit tertulis dalam teks."
                             "Jangan melakukan inferensi, generalisasi, atau interpretasi."
-                            "Jika informasi tidak disebutkan secara jelas dan eksplisit, isi dengan null."
                             "Jangan menggunakan pengetahuan eksternal."
                             "Untuk setiap field berbasis teks (string/array), gunakan kutipan langsung dari teks asli tanpa parafrase kecuali diminta untuk ringkasan."
+                            "Jika informasi tidak disebutkan secara jelas dan eksplisit, isi dengan null. Ingat jangan dikosongkan"
                         ),
                     },
                     {
@@ -252,11 +359,27 @@ class BaseExtractor:
                 val = True
                 confidence = 0.9
                 break
-
-            try:
-                val = match.group(1).strip()
-            except IndexError:
-                val = match.group(0).strip()
+            elif field_name == "prison_term":
+                try:
+                    years = int(match.group(1)) if match.group(1) else 0
+                except (IndexError, ValueError):
+                    years = 0
+                    
+                months = 0
+                if len(match.groups()) >= 2 and match.group(2):
+                    try:
+                        months = int(match.group(2))
+                    except ValueError:
+                        months = 0
+                        
+                val = {"years": years, "months": months}
+                confidence = 0.95
+                break
+            else:
+                try:
+                    val = match.group(1).strip()
+                except IndexError:
+                    val = match.group(0).strip()
 
             for sw in rule.get("stop_words", []):
                 if isinstance(val, str) and sw in val:
@@ -280,6 +403,12 @@ class BaseExtractor:
     def _build_llm_batch_prompt(
         self, scope_name: str, scope_text: str, fields_spec: List[Dict[str, Any]]
     ) -> str:
+        # Safety net: Truncate jika teks terlalu panjang untuk menghemat token
+        # 20.000 karakter kira-kira 5.000-6.000 token.
+        if len(scope_text) > 20000:
+            self.log(f"   ⚠️ [TOKEN-SAVER] Scope '{scope_name}' terlalu panjang ({len(scope_text)} chars). Dipotong ke 20k chars.")
+            scope_text = scope_text[:20000] + "\n...[TRUNCATED]..."
+
         """Bangun prompt terstruktur untuk beberapa field sekaligus (JSON-only)."""
         fields_desc_lines: List[str] = []
         json_template_lines: List[str] = ["{"]
@@ -388,6 +517,25 @@ Kembalikan SATU objek JSON dengan field tepat seperti contoh struktur di bawah i
                 return None
         return None
 
+    def save_sections_to_files(self, base_path_without_ext: str):
+        """Menyimpan setiap bagian dokumen ke file .txt terpisah untuk debugging."""
+        self.log(f"\n   💾 Menyimpan hasil split dokumen ke file untuk debug...")
+        # Dapatkan direktori dari base_path
+        output_dir = os.path.dirname(base_path_without_ext)
+        file_base_name = os.path.basename(base_path_without_ext)
+
+        for section_name, section_text in self.sections.items():
+            output_filename = f"{file_base_name}_section_{section_name}.txt"
+            output_path = os.path.join(output_dir, output_filename)
+            
+            try:
+                with open(output_path, "w", encoding="utf-8") as f:
+                    f.write(f"===== SECTION: {section_name.upper()} =====\n\n")
+                    f.write(section_text if section_text.strip() else "[BAGIAN INI KOSONG]")
+                self.log(f"      -> Disimpan: {output_filename}")
+            except Exception as e:
+                self.log(f"      -> ❌ Gagal menyimpan {section_name}: {e}")
+
     def _extract_with_llm_batch(
         self,
         scope_name: str,
@@ -483,6 +631,7 @@ Kembalikan SATU objek JSON dengan field tepat seperti contoh struktur di bawah i
                     "type": rule.get("type", "string"),
                     "description": rule.get("description", ""),
                     "category": rule.get("category", "what"),
+                    "ouput_format": rule.get("output_format", "text")
                 }
             )
 
@@ -493,7 +642,7 @@ Kembalikan SATU objek JSON dengan field tepat seperti contoh struktur di bawah i
             )
 
             llm_input_spec = [
-                {"name": f["name"], "type": f["type"], "description": f["description"]}
+                {"name": f["name"], "type": f["type"], "description": f["description"], "ouput_format": f.get("output_format", "text")}
                 for f in fields_spec
             ]
 

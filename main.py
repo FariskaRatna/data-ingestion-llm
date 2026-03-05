@@ -143,45 +143,62 @@ def main():
         try:
             # Ubah daftar ini jika ingin membatasi field LLM yang diekstrak
             llm_fields_test = [
-                "indictment_model",
-                "charged_articles",
-                "proven_offense",
-                "defendants",
-                "co_defendants",
-                "evidence_items",
-                "defendant_count",
-                "evidence_item_count",
-                "verdict_per_charge",
+                # "indictment_model",
+                # "charged_articles", 
+                # "proven_offense",   
+                # "defendants",       
+                # "co_defendants",    
+                # "evidence_items",   
+                # "district_court_date",
+                # "district_court",
+                # "defendant_count",
+                # "evidence_item_count",
+                # "verdict_per_charge",
                 "aggravating_factors",
                 "mitigating_factors",
-                "defendant_ideology_affiliation",
-                "defendant_local_network",
-                "has_attack_plan",
-                "attack_preparation_activities",
-                "attack_plan_summary",
-                "radicalization_sources",
-                "activity_locations",
-                "crime_time_range",
-                "reasoning_evidence",
-                "reasoning_appeal",
-                "motivation_factors",
-                "evidence_disposition",
-                "appellate_outcome",
-                "detention_timeline",
-                "appeal_timeline",
-                "judges",
-                "clerk",
-                "prosecutors",
-                "defense_counsels",
-                "witnesses"
+                # "defendant_ideology_affiliation",
+                # "defendant_local_network",
+                # "has_attack_plan",
+                # "attack_preparation_activities",
+                # "attack_plan_summary",
+                # "radicalization_sources",
+                # "activity_locations",
+                # # "crime_time_range",
+                # "reasoning_evidence",
+                # "reasoning_appeal",
+                # "motivation_factors",
+                # "evidence_disposition",
+                # "appellate_outcome",
+                # "detention_timeline",
+                # "appeal_timeline",
+                # "judges",
+                # "clerk",
+                # "prosecutors",
+                # "defense_counsels",
+                # "witnesses",
+                # "arrest_date",
+                # "arrest_location",
+                # "investigators",
+                # "defense_plea",
+                # "defendant_local_network_joined_at",
+                # "injury_severity",
+                # "related_entities",
+                # "defendant_chat_platform",
             ]
 
             extractor = BaseExtractor(
                 text=text_content,
                 template_path=template_path,
-                verbose=True,
+                verbose=False, # Set False agar tidak spam log saat proses 100 file
                 llm_fields=llm_fields_test,
             )
+
+            # Simpan hasil split sections untuk debugging
+            debug_dir = os.path.join(output_dir, "debug_sections")
+            Path(debug_dir).mkdir(parents=True, exist_ok=True)
+            debug_base_path = os.path.join(debug_dir, file_base_name)
+            extractor.save_sections_to_files(debug_base_path)
+
             extracted_data = extractor.run_extraction()
             
             with open(output_json_path, "w", encoding="utf-8") as json_file:
