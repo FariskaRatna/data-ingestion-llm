@@ -203,13 +203,23 @@ class BaseExtractor:
         # -----------------------------------------
         # 5. Coba ekstrak bagian BARANG BUKTI (Hemat Token)
         # -----------------------------------------
-        # Mencari blok barang bukti di dalam body untuk mengurangi token saat ekstraksi evidence_items
+        # Daftar barang bukti seringkali berada di dalam amar putusan (footer), jadi kita cari di seluruh teks.
+        # Pola ini mencari blok yang dimulai dengan "Menetapkan barang bukti" atau "Menimbang, bahwa terhadap barang bukti"
+        # dan berhenti sebelum "Membebankan biaya perkara" atau "Demikianlah diputuskan".
         evidence_match = re.search(
-            r"(?:menetapkan\s+)?barang\s+bukti\s*(?:berupa|adalah|yang\s+diajukan)?\s*[:\.]?.*?(?=\n\s*(?:MENGADILI|Mengingat|Menimbang|Membebankan|Demikianlah))",
-            body_text,
+            r"((?:Menetapkan|Menimbang, bahwa terhadap)\s+barang\s+bukti[\s\S]+?)(?=\n\s*Membebankan\s+kepada\s+Terdakwa|\n\s*Demikianlah\s+diputuskan)",
+            text, # Cari di seluruh teks, bukan hanya di body
             re.DOTALL | re.IGNORECASE
         )
-        evidence_section = evidence_match.group(0).strip() if evidence_match else ""
+        evidence_section = evidence_match.group(1).strip() if evidence_match else ""
+
+        # Fallback: Jika pola utama gagal, dan kata "barang bukti" ada di footer, gunakan seluruh footer.
+        # Ini lebih baik daripada mengirim string kosong ke LLM.
+        if not evidence_section and "barang bukti" in footer_text.lower():
+            self.log(
+                "   [SPLITTER-DEBUG] Pola utama evidence tidak ditemukan. Menggunakan footer sebagai fallback untuk scope 'evidence'."
+            )
+            evidence_section = footer_text
 
         # -----------------------------------------
         # 6. Coba ekstrak bagian FACTORS (Memberatkan/Meringankan)
@@ -517,6 +527,43 @@ Kembalikan SATU objek JSON dengan field tepat seperti contoh struktur di bawah i
                 return None
         return None
 
+    def _create_context_window(self, text: str, keywords: List[str], window_size: int) -> str:
+        """
+        Finds keywords in text and extracts a window around them.
+        Concatenates all found windows into a single, smaller text.
+        """
+        if not keywords or not window_size:
+            return text
+
+        snippets = []
+        # Build a single regex for all keywords to find them in one pass
+        # Using word boundaries to avoid matching parts of words
+        keyword_regex = re.compile(r'\b(' + '|'.join(map(re.escape, keywords)) + r')\b', re.IGNORECASE)
+
+        for match in keyword_regex.finditer(text):
+            # Define the snippet boundaries
+            half_window = window_size // 2
+            start_index = max(0, match.start() - half_window)
+            end_index = min(len(text), match.end() + half_window)
+            
+            snippet = text[start_index:end_index]
+            snippets.append(snippet)
+
+        if not snippets:
+            self.log(f"   ⚠️ [CONTEXT-WINDOW] No keywords found. Using original scope text (truncated).")
+            # Return a chunk of the original text if no keywords are found
+            return text[:window_size * 2] if len(text) > window_size * 2 else text
+
+        # Join unique snippets to avoid redundancy
+        unique_snippets = list(dict.fromkeys(snippets))
+        
+        MAX_SNIPPETS = 10
+        if len(unique_snippets) > MAX_SNIPPETS:
+            self.log(f"   ⚠️ [CONTEXT-WINDOW] Found {len(unique_snippets)} snippets, limiting to {MAX_SNIPPETS}.")
+            unique_snippets = unique_snippets[:MAX_SNIPPETS]
+        
+        return "\n\n[... SNIPPET ...]\n\n".join(unique_snippets)
+
     def save_sections_to_files(self, base_path_without_ext: str):
         """Menyimpan setiap bagian dokumen ke file .txt terpisah untuk debugging."""
         self.log(f"\n   💾 Menyimpan hasil split dokumen ke file untuk debug...")
@@ -616,52 +663,96 @@ Kembalikan SATU objek JSON dengan field tepat seperti contoh struktur di bawah i
             self._add_field(category, field_name, val, confidence=conf, source="regex")
             self.log(f"   ✅ [REGEX] {field_name}: {val} (conf={conf:.2f})")
 
-        # 2) Kelompokkan semua field LLM per scope dan panggil model secara batched
-        llm_by_scope: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+        # 2) Pisahkan field LLM menjadi grup batched dan individual (windowed)
+        llm_batched_by_scope: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+        llm_individual: List[Dict[str, Any]] = []
+
         for field_name, rule in self.rules.items():
             if rule.get("method") != "llm":
                 continue
-            # Jika ada whitelist field LLM, hanya proses yang termasuk
             if self.llm_fields is not None and field_name not in self.llm_fields:
                 continue
-            target_scope = rule.get("scope", "full")
-            llm_by_scope[target_scope].append(
-                {
-                    "name": field_name,
-                    "type": rule.get("type", "string"),
-                    "description": rule.get("description", ""),
-                    "category": rule.get("category", "what"),
-                    "ouput_format": rule.get("output_format", "text")
-                }
-            )
 
-        for scope_name, fields_spec in llm_by_scope.items():
+            field_spec = {
+                "name": field_name,
+                "type": rule.get("type", "string"),
+                "description": rule.get("description", ""),
+                "category": rule.get("category", "what"),
+                "output_format": rule.get("output_format", "text"),
+                "scope": rule.get("scope", "full"),
+                "context_keywords": rule.get("context_keywords"),
+                "window_size": rule.get("window_size")
+            }
+
+            if field_spec["context_keywords"] and field_spec["window_size"]:
+                llm_individual.append(field_spec)
+            else:
+                target_scope = field_spec["scope"]
+                llm_batched_by_scope[target_scope].append(field_spec)
+
+        # 3) Proses field LLM yang bisa di-batch
+        for scope_name, fields_spec in llm_batched_by_scope.items():
             text_to_process = self.sections.get(scope_name, self.text)
             self.log(
                 f"\n   🔍 Menjalankan LLM batch untuk scope '{scope_name}' ({len(fields_spec)} field)..."
             )
 
             llm_input_spec = [
-                {"name": f["name"], "type": f["type"], "description": f["description"], "ouput_format": f.get("output_format", "text")}
+                {"name": f["name"], "type": f["type"], "description": f["description"], "output_format": f.get("output_format", "text")}
                 for f in fields_spec
             ]
 
             batch_results = self._extract_with_llm_batch(
                 scope_name=scope_name,
                 scope_text=text_to_process,
-                fields_spec=llm_input_spec,
+                fields_spec=llm_input_spec
             )
 
             for field in fields_spec:
                 fname = field["name"]
                 category = field["category"]
                 if fname not in batch_results:
-                    self.log(f"   ❌ [LLM] {fname}: Tidak ada di respons JSON")
+                    self.log(f"   ❌ [LLM-BATCH] {fname}: Tidak ada di respons JSON")
                     continue
 
                 val, conf = batch_results[fname]
                 val = self._cleanup_value(fname, val)
                 self._add_field(category, fname, val, confidence=conf, source="llm")
-                self.log(f"   ✅ [LLM] {fname}: {val} (conf={conf:.2f})")
+                self.log(f"   ✅ [LLM-BATCH] {fname}: {val} (conf={conf:.2f})")
+
+        # 4) Proses field LLM individual dengan context window
+        if llm_individual:
+            self.log(f"\n   ⚡️ Menjalankan LLM individual untuk {len(llm_individual)} field dengan context window...")
+
+        for field_spec in llm_individual:
+            fname = field_spec["name"]
+            scope_name = field_spec["scope"]
+            category = field_spec["category"]
+            keywords = field_spec["context_keywords"]
+            window = field_spec["window_size"]
+
+            self.log(f"      -> Memproses '{fname}'...")
+            original_scope_text = self.sections.get(scope_name, self.text)
+            
+            text_to_process = self._create_context_window(original_scope_text, keywords, window)
+            if len(original_scope_text) != len(text_to_process):
+                self.log(f"         [CONTEXT] Original size: {len(original_scope_text)} chars, New size: {len(text_to_process)} chars.")
+
+            single_field_spec = [{"name": fname, "type": field_spec["type"], "description": field_spec["description"], "output_format": field_spec.get("output_format", "text")}]
+            
+            batch_results = self._extract_with_llm_batch(
+                scope_name=f"{scope_name} (windowed)",
+                scope_text=text_to_process,
+                fields_spec=single_field_spec,
+            )
+
+            if fname not in batch_results:
+                self.log(f"   ❌ [LLM-WINDOWED] {fname}: Tidak ada di respons JSON")
+                continue
+
+            val, conf = batch_results[fname]
+            val = self._cleanup_value(fname, val)
+            self._add_field(category, fname, val, confidence=conf, source="llm_windowed")
+            self.log(f"   ✅ [LLM-WINDOWED] {fname}: {val} (conf={conf:.2f})")
 
         return self.data
